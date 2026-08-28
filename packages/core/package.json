@@ -79,7 +79,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "test": "tsc -p tsconfig.json && node --test dist/test/identity.test.js dist/test/notes.test.js dist/test/proof.test.js dist/test/rooms.test.js dist/test/safety.test.js dist/test/tasks.test.js dist/test/state-machine.test.js dist/test/registry-router.test.js dist/test/verifiable-result.test.js dist/test/security-permissions.test.js dist/test/memory.test.js dist/test/workflow-engine.test.js dist/test/e2e-orchestrator.test.js",
+    "test": "tsc -p tsconfig.json && node --test dist/test/identity.test.js dist/test/notes.test.js dist/test/proof.test.js dist/test/rooms.test.js dist/test/safety.test.js dist/test/tasks.test.js dist/test/state-machine.test.js dist/test/registry-router.test.js dist/test/verifiable-result.test.js dist/test/security-permissions.test.js dist/test/memory.test.js dist/test/workflow-engine.test.js dist/test/providers.test.js dist/test/e2e-orchestrator.test.js",
     "typecheck": "tsc --noEmit",
     "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\""
   },
