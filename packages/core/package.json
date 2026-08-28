@@ -46,6 +46,30 @@
     "./tasks": {
       "types": "./dist/src/tasks/index.d.ts",
       "import": "./dist/src/tasks/index.js"
+    },
+    "./registry": {
+      "types": "./dist/src/registry/index.d.ts",
+      "import": "./dist/src/registry/index.js"
+    },
+    "./router": {
+      "types": "./dist/src/router/index.d.ts",
+      "import": "./dist/src/router/index.js"
+    },
+    "./orchestrator": {
+      "types": "./dist/src/orchestrator/index.d.ts",
+      "import": "./dist/src/orchestrator/index.js"
+    },
+    "./providers": {
+      "types": "./dist/src/providers/index.d.ts",
+      "import": "./dist/src/providers/index.js"
+    },
+    "./memory": {
+      "types": "./dist/src/memory/index.d.ts",
+      "import": "./dist/src/memory/index.js"
+    },
+    "./events": {
+      "types": "./dist/src/events/index.d.ts",
+      "import": "./dist/src/events/index.js"
     }
   },
   "files": [
@@ -55,7 +79,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "test": "tsc -p tsconfig.json && node --test dist/test/*.test.js",
+    "test": "tsc -p tsconfig.json && node --test dist/test/identity.test.js dist/test/notes.test.js dist/test/proof.test.js dist/test/rooms.test.js dist/test/safety.test.js dist/test/tasks.test.js dist/test/state-machine.test.js dist/test/registry-router.test.js dist/test/verifiable-result.test.js dist/test/security-permissions.test.js dist/test/memory.test.js dist/test/workflow-engine.test.js dist/test/e2e-orchestrator.test.js",
     "typecheck": "tsc --noEmit",
     "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\""
   },
