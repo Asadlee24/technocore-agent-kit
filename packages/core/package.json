@@ -5,43 +5,43 @@
   "author": "Asad Lee <https://asad-lee-portfolio.vercel.app/>",
   "license": "MIT",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "bin": {
-    "technocore-agent": "./dist/cli/index.js"
+    "technocore-agent": "./dist/src/cli/index.js"
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
     },
     "./identity": {
-      "types": "./dist/identity/index.d.ts",
-      "import": "./dist/identity/index.js"
+      "types": "./dist/src/identity/index.d.ts",
+      "import": "./dist/src/identity/index.js"
     },
     "./rooms": {
-      "types": "./dist/rooms/index.d.ts",
-      "import": "./dist/rooms/index.js"
+      "types": "./dist/src/rooms/index.d.ts",
+      "import": "./dist/src/rooms/index.js"
     },
     "./notes": {
-      "types": "./dist/notes/index.d.ts",
-      "import": "./dist/notes/index.js"
+      "types": "./dist/src/notes/index.d.ts",
+      "import": "./dist/src/notes/index.js"
     },
     "./verify": {
-      "types": "./dist/verify/index.d.ts",
-      "import": "./dist/verify/index.js"
+      "types": "./dist/src/verify/index.d.ts",
+      "import": "./dist/src/verify/index.js"
     },
     "./safety": {
-      "types": "./dist/safety/index.d.ts",
-      "import": "./dist/safety/index.js"
+      "types": "./dist/src/safety/index.d.ts",
+      "import": "./dist/src/safety/index.js"
     },
     "./mcp": {
-      "types": "./dist/mcp/index.d.ts",
-      "import": "./dist/mcp/index.js"
+      "types": "./dist/src/mcp/index.d.ts",
+      "import": "./dist/src/mcp/index.js"
     },
     "./proof": {
-      "types": "./dist/proof/index.d.ts",
-      "import": "./dist/proof/index.js"
+      "types": "./dist/src/proof/index.d.ts",
+      "import": "./dist/src/proof/index.js"
     }
   },
   "files": [

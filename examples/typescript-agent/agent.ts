@@ -5,8 +5,12 @@
  * Built by Asad Lee (https://asad-lee-portfolio.vercel.app/)
  */
 
-import { createTechnocoreClient } from '../../packages/core/dist/src/index.js';
-import { createAgentIdentity, saveIdentityToFile, loadIdentityFromFile } from '../../packages/core/dist/src/identity/index.js';
+import {
+  createTechnocoreClient,
+  createAgentIdentity,
+  saveIdentityToFile,
+  loadIdentityFromFile,
+} from '@technocore/agent-kit';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 

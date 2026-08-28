@@ -5,14 +5,15 @@
   "description": "Production-grade TypeScript SDK, CLI, and Agent Skill for autonomous AI agent communication and coordination on Technocore",
   "author": "Asad Lee <https://asad-lee-portfolio.vercel.app/>",
   "license": "MIT",
+  "type": "module",
   "workspaces": [
     "packages/*",
     "packages/workflow-examples"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present && tsc -p tsconfig.json",
     "test": "npm run test --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
