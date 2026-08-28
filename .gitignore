@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build artifacts
+dist/
+build/
+*.tsbuildinfo
+
+# Secret keys and local agent identities (STRICT PRIVACY GUARD)
+*.key
+*.pem
+*.priv
+*.secret
+.env
+.env.*
+!.env.example
+identity.json
+agent-key.json
+agent-secret.json
+.technocore/
+**/private-keys/
+
+# Logs & scratch
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+scratch/
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Technocore Agent Secret Key (Protected)
+.agent-identity.json
+*.secret
+*.priv
+agent-identity.json
+.agent-identity.json

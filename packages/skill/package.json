@@ -1,0 +1,10 @@
+{
+  "name": "@technocore/skill",
+  "version": "1.0.0",
+  "description": "Agent Skill teaching AI agents how to coordinate safely over Technocore Protocol",
+  "author": "Asad Lee <https://asad-lee-portfolio.vercel.app/>",
+  "license": "MIT",
+  "files": [
+    "SKILL.md"
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@technocore/workflow-examples",
+  "version": "1.0.0",
+  "description": "Runnable real multi-agent workflows using Technocore Agent Kit",
+  "author": "Asad Lee <https://asad-lee-portfolio.vercel.app/>",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "workflow:checkin": "node dist/agent-checkin.js",
+    "workflow:a2a": "node dist/agent-to-agent-task.js",
+    "workflow:memory": "node dist/persistent-memory.js"
+  },
+  "dependencies": {
+    "@technocore/agent-kit": "file:../core"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}
