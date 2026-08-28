@@ -1,121 +1,170 @@
 /**
- * Technocore Agent Kit — Web Application Logic & 3D Interactive Matrix
+ * Technocore Agent Kit — Web Application Logic & Mobile Navigation
  * Built by Asad Lee (https://asad-lee-portfolio.vercel.app/)
  */
 
-// ─── 1. 3D Interactive Agent Mesh Canvas ──────────────────────────────────────
-const canvas = document.getElementById('agent-matrix-canvas');
-const ctx = canvas.getContext('2d');
+// ─── 1. Mobile Menu Drawer Interactivity ─────────────────────────────────────
+const mobileToggle = document.getElementById('mobile-toggle');
+const mobileDrawer = document.getElementById('mobile-drawer');
+const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
 
-let width = (canvas.width = window.innerWidth);
-let height = (canvas.height = window.innerHeight);
-
-window.addEventListener('resize', () => {
-  width = canvas.width = window.innerWidth;
-  height = canvas.height = window.innerHeight;
-  initNodes();
-});
-
-let mouse = { x: width / 2, y: height / 2, radius: 180 };
-window.addEventListener('mousemove', (e) => {
-  mouse.x = e.clientX;
-  mouse.y = e.clientY;
-});
-
-const NODE_COUNT = Math.min(65, Math.floor((width * height) / 18000));
-let nodes = [];
-
-class AgentNode {
-  constructor() {
-    this.x = Math.random() * width;
-    this.y = Math.random() * height;
-    this.vx = (Math.random() - 0.5) * 0.7;
-    this.vy = (Math.random() - 0.5) * 0.7;
-    this.radius = Math.random() * 2.2 + 1.2;
-    this.isAgent = Math.random() > 0.75;
-    this.pulsePhase = Math.random() * Math.PI * 2;
-  }
-
-  update() {
-    this.x += this.vx;
-    this.y += this.vy;
-
-    if (this.x < 0 || this.x > width) this.vx *= -1;
-    if (this.y < 0 || this.y > height) this.vy *= -1;
-
-    this.pulsePhase += 0.03;
-
-    // Mouse interaction
-    const dx = mouse.x - this.x;
-    const dy = mouse.y - this.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < mouse.radius) {
-      const force = (mouse.radius - dist) / mouse.radius;
-      this.x -= (dx / dist) * force * 1.5;
-      this.y -= (dy / dist) * force * 1.5;
-    }
-  }
-
-  draw() {
-    ctx.beginPath();
-    const currentRadius = this.isAgent
-      ? this.radius + Math.sin(this.pulsePhase) * 0.8
-      : this.radius;
-    ctx.arc(this.x, this.y, currentRadius, 0, Math.PI * 2);
-
-    if (this.isAgent) {
-      ctx.fillStyle = '#00f0ff';
-      ctx.shadowColor = '#00f0ff';
-      ctx.shadowBlur = 10;
+if (mobileToggle && mobileDrawer) {
+  mobileToggle.addEventListener('click', () => {
+    const isOpen = mobileDrawer.classList.contains('open');
+    if (isOpen) {
+      closeMobileMenu();
     } else {
-      ctx.fillStyle = 'rgba(168, 85, 247, 0.6)';
-      ctx.shadowBlur = 0;
+      openMobileMenu();
     }
-    ctx.fill();
-  }
+  });
+
+  mobileNavLinks.forEach((link) => {
+    link.addEventListener('click', () => {
+      closeMobileMenu();
+    });
+  });
+
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    if (
+      mobileDrawer.classList.contains('open') &&
+      !mobileDrawer.contains(e.target) &&
+      !mobileToggle.contains(e.target)
+    ) {
+      closeMobileMenu();
+    }
+  });
 }
 
-function initNodes() {
-  nodes = [];
-  for (let i = 0; i < NODE_COUNT; i++) {
-    nodes.push(new AgentNode());
-  }
+function openMobileMenu() {
+  mobileDrawer.classList.add('open');
+  mobileToggle.classList.add('active');
+  mobileToggle.setAttribute('aria-expanded', 'true');
+  document.body.style.overflow = 'hidden';
 }
-initNodes();
 
-function animate() {
-  ctx.clearRect(0, 0, width, height);
+function closeMobileMenu() {
+  mobileDrawer.classList.remove('open');
+  mobileToggle.classList.remove('active');
+  mobileToggle.setAttribute('aria-expanded', 'false');
+  document.body.style.overflow = '';
+}
 
-  // Draw connections
-  for (let i = 0; i < nodes.length; i++) {
-    for (let j = i + 1; j < nodes.length; j++) {
-      const dx = nodes[i].x - nodes[j].x;
-      const dy = nodes[i].y - nodes[j].y;
+// ─── 2. Subtle Interactive Particle Mesh Canvas ──────────────────────────────
+const canvas = document.getElementById('agent-matrix-canvas');
+const ctx = canvas ? canvas.getContext('2d') : null;
+
+if (canvas && ctx) {
+  let width = (canvas.width = window.innerWidth);
+  let height = (canvas.height = window.innerHeight);
+
+  window.addEventListener('resize', () => {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    initNodes();
+  });
+
+  let mouse = { x: width / 2, y: height / 2, radius: 150 };
+  window.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+
+  const NODE_COUNT = Math.min(50, Math.floor((width * height) / 22000));
+  let nodes = [];
+
+  class AgentNode {
+    constructor() {
+      this.x = Math.random() * width;
+      this.y = Math.random() * height;
+      this.vx = (Math.random() - 0.5) * 0.5;
+      this.vy = (Math.random() - 0.5) * 0.5;
+      this.radius = Math.random() * 2 + 1;
+      this.isAgent = Math.random() > 0.75;
+      this.pulsePhase = Math.random() * Math.PI * 2;
+    }
+
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+
+      if (this.x < 0 || this.x > width) this.vx *= -1;
+      if (this.y < 0 || this.y > height) this.vy *= -1;
+
+      this.pulsePhase += 0.025;
+
+      // Mouse interaction
+      const dx = mouse.x - this.x;
+      const dy = mouse.y - this.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-
-      if (dist < 130) {
-        const opacity = (1 - dist / 130) * 0.22;
-        ctx.strokeStyle = `rgba(0, 240, 255, ${opacity})`;
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.moveTo(nodes[i].x, nodes[i].y);
-        ctx.lineTo(nodes[j].x, nodes[j].y);
-        ctx.stroke();
+      if (dist < mouse.radius) {
+        const force = (mouse.radius - dist) / mouse.radius;
+        this.x -= (dx / dist) * force * 1.2;
+        this.y -= (dy / dist) * force * 1.2;
       }
     }
+
+    draw() {
+      ctx.beginPath();
+      const currentRadius = this.isAgent
+        ? this.radius + Math.sin(this.pulsePhase) * 0.6
+        : this.radius;
+      ctx.arc(this.x, this.y, currentRadius, 0, Math.PI * 2);
+
+      if (this.isAgent) {
+        ctx.fillStyle = '#818cf8';
+        ctx.shadowColor = '#6366f1';
+        ctx.shadowBlur = 8;
+      } else {
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.4)';
+        ctx.shadowBlur = 0;
+      }
+      ctx.fill();
+    }
   }
 
-  // Draw nodes
-  for (const node of nodes) {
-    node.update();
-    node.draw();
+  function initNodes() {
+    nodes = [];
+    for (let i = 0; i < NODE_COUNT; i++) {
+      nodes.push(new AgentNode());
+    }
   }
+  initNodes();
 
-  requestAnimationFrame(animate);
+  function animate() {
+    ctx.clearRect(0, 0, width, height);
+
+    // Draw connection lines
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < 120) {
+          const opacity = (1 - dist / 120) * 0.18;
+          ctx.strokeStyle = `rgba(99, 102, 241, ${opacity})`;
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Draw nodes
+    for (const node of nodes) {
+      node.update();
+      node.draw();
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
 }
-animate();
 
-// ─── 2. Live Room Explorer & Telemetry ─────────────────────────────────────────
+// ─── 3. Live Room Explorer & Telemetry ─────────────────────────────────────────
 const roomItems = document.querySelectorAll('.room-item');
 const roomTitle = document.getElementById('current-room-title');
 const roomTopic = document.getElementById('current-room-topic');
@@ -162,17 +211,20 @@ const ROOM_DATA = {
   }
 };
 
-roomItems.forEach((item) => {
-  item.addEventListener('click', () => {
-    roomItems.forEach((r) => r.classList.remove('active'));
-    item.classList.add('active');
+if (roomItems.length > 0) {
+  roomItems.forEach((item) => {
+    item.addEventListener('click', () => {
+      roomItems.forEach((r) => r.classList.remove('active'));
+      item.classList.add('active');
 
-    const roomName = item.getAttribute('data-room');
-    loadRoom(roomName);
+      const roomName = item.getAttribute('data-room');
+      loadRoom(roomName);
+    });
   });
-});
+}
 
 function loadRoom(roomName) {
+  if (!roomTitle || !roomTopic || !messagesContainer) return;
   const data = ROOM_DATA[roomName] || { topic: 'Public Channel', messages: [] };
   roomTitle.textContent = `#${roomName}`;
   roomTopic.textContent = data.topic;
@@ -197,7 +249,7 @@ function escapeHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// ─── 3. In-Browser DID Generator & SHA-256 Fingerprint Forge ─────────────────
+// ─── 4. In-Browser DID Generator & SHA-256 Fingerprint Forge ─────────────────
 const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
 function encodeBase58(buffer) {
@@ -245,9 +297,13 @@ async function generateFreshDid() {
   const shard = fingerprint.substring(0, 2);
   const key = fingerprint.substring(2, 16);
 
-  document.getElementById('did-display').textContent = did;
-  document.getElementById('fingerprint-display').textContent = fingerprint;
-  document.getElementById('shard-display').textContent = `kv/did-${shard}/${key}`;
+  const didEl = document.getElementById('did-display');
+  const fpEl = document.getElementById('fingerprint-display');
+  const shardEl = document.getElementById('shard-display');
+
+  if (didEl) didEl.textContent = did;
+  if (fpEl) fpEl.textContent = fingerprint;
+  if (shardEl) shardEl.textContent = `kv/did-${shard}/${key}`;
 }
 
 const generateDidBtn = document.getElementById('generate-did-btn');
@@ -255,7 +311,7 @@ if (generateDidBtn) {
   generateDidBtn.addEventListener('click', generateFreshDid);
 }
 
-// ─── 4. Single-Line Sweep & Signature Validator ──────────────────────────────
+// ─── 5. Single-Line Sweep & Signature Validator ──────────────────────────────
 const signTextInput = document.getElementById('sign-text-input');
 const sweptDisplay = document.getElementById('swept-display');
 
@@ -272,7 +328,7 @@ if (signTextInput && sweptDisplay) {
   });
 }
 
-// ─── 5. Workflow Tabs Switcher ────────────────────────────────────────────────
+// ─── 6. Workflow Tabs Switcher ────────────────────────────────────────────────
 const wfTabs = document.querySelectorAll('.workflow-tab');
 const tabPanes = document.querySelectorAll('.tab-pane');
 
