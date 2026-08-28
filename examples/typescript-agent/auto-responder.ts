@@ -8,339 +8,79 @@
 
 import * as path from 'node:path';
 import { createTechnocoreClient } from '@technocore/agent-kit';
+import { processTask } from '@technocore/agent-kit/tasks';
 import type { RoomMessage } from '@technocore/agent-kit';
 
-export interface TaskResultEnvelope {
-  success: boolean;
-  taskType: string;
-  result?: any;
-  error?: string;
-  input?: string;
-  processedAt: string;
-}
-
 /**
- * Safe recursive-descent math expression parser & evaluator.
- * Strictly avoids eval(), Function constructor, or any shell/code execution.
+ * Formats the raw processTask() output into a clean, human-readable RESULT: string.
+ *
+ * processTask() always returns:
+ *   RESULT: <JSON envelope>
+ *
+ * This formatter extracts the meaningful value from the envelope so that:
+ *   RESULT: {"success":true,"taskType":"CALCULATE","result":100,...}
+ * becomes:
+ *   RESULT: 100
+ *
+ * For structured results (WORD_COUNT, JSON_VALIDATE, SUMMARIZE) it formats
+ * a compact human-readable summary.
  */
-export function evaluateMathExpression(expr: string): number {
-  // Normalize common natural math phrasing
-  let clean = expr
-    .replace(/multiplied\s+by|times/gi, '*')
-    .replace(/divided\s+by|over/gi, '/')
-    .replace(/plus/gi, '+')
-    .replace(/minus/gi, '-')
-    .replace(/\^/g, '**')
-    .replace(/,/g, '') // remove digit group commas like 1,000
-    .trim();
+function formatResult(rawResponse: string): string {
+  // Strip the "RESULT: " prefix to get the JSON
+  const jsonStr = rawResponse.startsWith('RESULT: ')
+    ? rawResponse.slice('RESULT: '.length)
+    : rawResponse;
 
-  // Validate allowed characters: 0-9, ., +, -, *, /, %, (, ), spaces
-  if (!/^[\d\s+\-*/%().*]+$/.test(clean)) {
-    throw new Error('Expression contains invalid characters');
+  let envelope: any;
+  try {
+    envelope = JSON.parse(jsonStr);
+  } catch {
+    // If it's not JSON, return as-is
+    return rawResponse;
   }
 
-  // Tokenize
-  const tokens: string[] = [];
-  const tokenRegex = /(\d+\.?\d*|\*\*|[+\-*/%()])/g;
-  let match;
-  while ((match = tokenRegex.exec(clean)) !== null) {
-    tokens.push(match[1]);
+  if (!envelope.success) {
+    return `RESULT: ERROR: ${envelope.error ?? 'Unknown error'}`;
   }
 
-  if (tokens.length === 0) {
-    throw new Error('Empty mathematical expression');
-  }
+  const result = envelope.result;
+  const taskType: string = envelope.taskType ?? '';
 
-  let index = 0;
+  switch (taskType) {
+    case 'CALCULATE':
+      // Return bare number (integer if whole, else up to 10 significant digits)
+      return `RESULT: ${Number.isInteger(result) ? result : parseFloat(result.toPrecision(10))}`;
 
-  function peek(): string | undefined {
-    return tokens[index];
-  }
+    case 'UPPERCASE':
+    case 'LOWERCASE':
+    case 'REVERSE':
+      // Return bare transformed string
+      return `RESULT: ${result}`;
 
-  function consume(expected?: string): string {
-    const token = tokens[index++];
-    if (expected && token !== expected) {
-      throw new Error(`Expected '${expected}' but got '${token}'`);
-    }
-    return token;
-  }
+    case 'WORD_COUNT':
+      return `RESULT: ${result.wordCount} words, ${result.characterCount} characters`;
 
-  function parseExpr(): number {
-    let result = parseTerm();
-    while (peek() === '+' || peek() === '-') {
-      const op = consume();
-      const right = parseTerm();
-      if (op === '+') result += right;
-      else result -= right;
-    }
-    return result;
-  }
-
-  function parseTerm(): number {
-    let result = parsePower();
-    while (peek() === '*' || peek() === '/' || peek() === '%') {
-      const op = consume();
-      const right = parsePower();
-      if (op === '*') result *= right;
-      else if (op === '/') {
-        if (right === 0) throw new Error('Division by zero');
-        result /= right;
-      } else if (op === '%') {
-        if (right === 0) throw new Error('Modulo by zero');
-        result %= right;
+    case 'JSON_VALIDATE':
+      if (result.valid) {
+        const keys = result.keys ? `, keys: [${result.keys.join(', ')}]` : '';
+        return `RESULT: Valid JSON (${result.valueType}${keys})`;
       }
-    }
-    return result;
-  }
+      return `RESULT: Invalid JSON`;
 
-  function parsePower(): number {
-    let base = parseFactor();
-    if (peek() === '**') {
-      consume();
-      const exp = parsePower();
-      return Math.pow(base, exp);
-    }
-    return base;
-  }
-
-  function parseFactor(): number {
-    if (peek() === '+') {
-      consume();
-      return parseFactor();
-    }
-    if (peek() === '-') {
-      consume();
-      return -parseFactor();
-    }
-    return parsePrimary();
-  }
-
-  function parsePrimary(): number {
-    const token = peek();
-    if (!token) throw new Error('Unexpected end of expression');
-
-    if (token === '(') {
-      consume('(');
-      const val = parseExpr();
-      consume(')');
-      return val;
+    case 'SUMMARIZE': {
+      const attrs = result.extractedAttributes
+        ? ' | ' + Object.entries(result.extractedAttributes).map(([k, v]) => `${k}=${v}`).join(' ')
+        : '';
+      return `RESULT: ${result.wordCount} words${attrs}`;
     }
 
-    const num = parseFloat(consume());
-    if (isNaN(num)) throw new Error(`Invalid number '${token}'`);
-    return num;
+    case 'CUSTOM_TEXT':
+      return `RESULT: ${result}`;
+
+    default:
+      // Fallback: pretty-print the result field
+      return `RESULT: ${typeof result === 'object' ? JSON.stringify(result) : result}`;
   }
-
-  const result = parseExpr();
-  if (index < tokens.length) {
-    throw new Error(`Unexpected trailing token '${tokens[index]}'`);
-  }
-  return result;
-}
-
-/**
- * Upgraded local task processor for Agent B.
- * Solves math calculations, text processing, JSON validation, and summarization
- * without requiring external API keys.
- */
-export function processTask(taskText: string): string {
-  const trimmed = taskText.trim();
-  const now = new Date().toISOString();
-
-  // 1. Check for explicit command prefixes (e.g. "CALCULATE: ...")
-  const prefixMatch = trimmed.match(/^([A-Z_]+):\s*(.*)$/s);
-
-  if (prefixMatch) {
-    const command = prefixMatch[1].toUpperCase();
-    const payload = prefixMatch[2].trim();
-
-    switch (command) {
-      case 'CALCULATE':
-      case 'CALC':
-      case 'MATH': {
-        try {
-          const numResult = evaluateMathExpression(payload);
-          const response: TaskResultEnvelope = {
-            success: true,
-            taskType: 'CALCULATE',
-            result: numResult,
-            input: payload,
-            processedAt: now,
-          };
-          return `RESULT: ${JSON.stringify(response)}`;
-        } catch (err: any) {
-          const response: TaskResultEnvelope = {
-            success: false,
-            taskType: 'CALCULATE',
-            error: err.message,
-            input: payload,
-            processedAt: now,
-          };
-          return `RESULT: ${JSON.stringify(response)}`;
-        }
-      }
-
-      case 'WORD_COUNT':
-      case 'COUNT_WORDS': {
-        const words = payload.split(/\s+/).filter(Boolean);
-        const characters = payload.length;
-        const charactersNoSpaces = payload.replace(/\s/g, '').length;
-        const lines = payload.split(/\r?\n/).filter(Boolean).length || (payload.length > 0 ? 1 : 0);
-        const sentences = payload.split(/[.!?]+/).filter((s) => s.trim().length > 0).length;
-
-        const response: TaskResultEnvelope = {
-          success: true,
-          taskType: 'WORD_COUNT',
-          result: {
-            wordCount: words.length,
-            characterCount: characters,
-            characterCountNoSpaces: charactersNoSpaces,
-            lineCount: lines,
-            sentenceCount: sentences,
-          },
-          processedAt: now,
-        };
-        return `RESULT: ${JSON.stringify(response)}`;
-      }
-
-      case 'UPPERCASE':
-      case 'TO_UPPER': {
-        const response: TaskResultEnvelope = {
-          success: true,
-          taskType: 'UPPERCASE',
-          result: payload.toUpperCase(),
-          processedAt: now,
-        };
-        return `RESULT: ${JSON.stringify(response)}`;
-      }
-
-      case 'LOWERCASE':
-      case 'TO_LOWER': {
-        const response: TaskResultEnvelope = {
-          success: true,
-          taskType: 'LOWERCASE',
-          result: payload.toLowerCase(),
-          processedAt: now,
-        };
-        return `RESULT: ${JSON.stringify(response)}`;
-      }
-
-      case 'REVERSE': {
-        const reversed = Array.from(payload).reverse().join('');
-        const response: TaskResultEnvelope = {
-          success: true,
-          taskType: 'REVERSE',
-          result: reversed,
-          processedAt: now,
-        };
-        return `RESULT: ${JSON.stringify(response)}`;
-      }
-
-      case 'JSON_VALIDATE':
-      case 'VALIDATE_JSON': {
-        try {
-          const parsed = JSON.parse(payload);
-          const isObj = typeof parsed === 'object' && parsed !== null;
-          const response: TaskResultEnvelope = {
-            success: true,
-            taskType: 'JSON_VALIDATE',
-            result: {
-              valid: true,
-              valueType: Array.isArray(parsed) ? 'array' : typeof parsed,
-              keys: isObj && !Array.isArray(parsed) ? Object.keys(parsed) : undefined,
-              itemCount: Array.isArray(parsed) ? parsed.length : isObj ? Object.keys(parsed).length : 1,
-              byteSize: Buffer.byteLength(payload, 'utf8'),
-            },
-            processedAt: now,
-          };
-          return `RESULT: ${JSON.stringify(response)}`;
-        } catch (err: any) {
-          const response: TaskResultEnvelope = {
-            success: false,
-            taskType: 'JSON_VALIDATE',
-            error: `Invalid JSON: ${err.message}`,
-            processedAt: now,
-          };
-          return `RESULT: ${JSON.stringify(response)}`;
-        }
-      }
-
-      case 'SUMMARIZE': {
-        const words = payload.split(/\s+/).filter(Boolean);
-        const lines = payload.split(/\r?\n/).filter(Boolean);
-        
-        // Extract basic key-value pairs if present (e.g. key=val or key: val)
-        const kvPairs: Record<string, string> = {};
-        const kvRegex = /([a-zA-Z0-9_-]+)\s*[:=]\s*([^\s,;]+)/g;
-        let kvMatch;
-        while ((kvMatch = kvRegex.exec(payload)) !== null) {
-          kvPairs[kvMatch[1]] = kvMatch[2];
-        }
-
-        const preview = payload.length > 100 ? `${payload.slice(0, 97)}...` : payload;
-
-        const response: TaskResultEnvelope = {
-          success: true,
-          taskType: 'SUMMARIZE',
-          result: {
-            wordCount: words.length,
-            lineCount: lines.length || 1,
-            preview,
-            extractedAttributes: Object.keys(kvPairs).length > 0 ? kvPairs : undefined,
-          },
-          processedAt: now,
-        };
-        return `RESULT: ${JSON.stringify(response)}`;
-      }
-    }
-  }
-
-  // 2. Natural language arithmetic query detection:
-  // e.g. "What is 25 multiplied by 4?", "What is (10 + 5) * 3?", "Calculate 100 / 4"
-  const naturalMathMatch = trimmed.match(/^(?:what\s+is|calculate|solve|evaluate)\s+(.+?)\??$/i);
-  if (naturalMathMatch) {
-    const rawExpr = naturalMathMatch[1].trim();
-    try {
-      const numResult = evaluateMathExpression(rawExpr);
-      const response: TaskResultEnvelope = {
-        success: true,
-        taskType: 'CALCULATE',
-        result: numResult,
-        input: rawExpr,
-        processedAt: now,
-      };
-      return `RESULT: ${JSON.stringify(response)}`;
-    } catch (err: any) {
-      // If it failed math evaluation, fall through
-    }
-  }
-
-  // 3. Direct math expression fallback (e.g. "25 * 4", "(100 + 50) / 2")
-  if (/^[\d\s+\-*/%().*^]+$/.test(trimmed) && /\d/.test(trimmed)) {
-    try {
-      const numResult = evaluateMathExpression(trimmed);
-      const response: TaskResultEnvelope = {
-        success: true,
-        taskType: 'CALCULATE',
-        result: numResult,
-        input: trimmed,
-        processedAt: now,
-      };
-      return `RESULT: ${JSON.stringify(response)}`;
-    } catch (err: any) {
-      // Fall through
-    }
-  }
-
-  // 4. Default structured fallback for custom tasks
-  const response: TaskResultEnvelope = {
-    success: true,
-    taskType: 'CUSTOM_TEXT',
-    result: `Agent B received and processed: ${trimmed}`,
-    input: trimmed,
-    processedAt: now,
-  };
-  return `RESULT: ${JSON.stringify(response)}`;
 }
 
 async function runAutoResponder() {
@@ -351,6 +91,7 @@ async function runAutoResponder() {
   console.log('🤖 Technocore Agent B — Automated Real Task Worker');
   console.log('   Capabilities: CALCULATE, WORD_COUNT, UPPERCASE, LOWERCASE,');
   console.log('                 REVERSE, JSON_VALIDATE, SUMMARIZE');
+  console.log('   Task Engine:  @technocore/agent-kit/tasks (local, no API key)');
   console.log('   Live Network: https://technocore.io');
   console.log('   Author: Asad Lee (https://asad-lee-portfolio.vercel.app/)');
   console.log('=============================================================\n');
@@ -358,7 +99,7 @@ async function runAutoResponder() {
   // Initialize client and load existing Agent B identity
   const client = createTechnocoreClient();
 
-  let identity;
+  let identity: Awaited<ReturnType<typeof client.did.loadFromFile>>;
   try {
     identity = client.did.loadFromFile(identityPath);
     console.log(`✔ [1] Loaded Agent B Identity from ${identityPath}`);
@@ -385,9 +126,9 @@ async function runAutoResponder() {
   process.on('SIGTERM', handleShutdown);
 
   console.log(`👂 [2] Watching room #${room} for incoming tasks...`);
-  console.log('    Filter: Messages starting with "TASK:"');
+  console.log('    Filter:     Messages starting with "TASK:"');
   console.log('    Self-Ignore: Active (Agent B will not reply to own DID)');
-  console.log('    Safety: Single-line sweep & prompt-injection wrapping enabled');
+  console.log('    Safety:     Single-line sweep & prompt-injection wrapping enabled');
   console.log('    Press Ctrl+C to stop.\n');
 
   let processedCount = 0;
@@ -439,10 +180,13 @@ async function runAutoResponder() {
           console.log(`   Signature:   ${isSigValid ? 'VALID ✔ (Ed25519 verified)' : 'INVALID ✖'}`);
         }
 
-        // 4. Generate response using upgraded local task processor
-        const responseText = processTask(rawTask);
-        console.log(`⚙ [Processing] Generated Structured Response:`);
-        console.log(`   ${responseText}`);
+        // 4. Process task using the core task engine, then format into human-readable result
+        const rawEnvelope = processTask(rawTask);
+        const responseText = formatResult(rawEnvelope);
+
+        console.log(`⚙ [Processing]`);
+        console.log(`   Engine Output:   ${rawEnvelope}`);
+        console.log(`   Formatted Reply: ${responseText}`);
 
         // 5. Send signed response back to the same room
         try {
