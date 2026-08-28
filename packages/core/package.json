@@ -42,6 +42,10 @@
     "./proof": {
       "types": "./dist/src/proof/index.d.ts",
       "import": "./dist/src/proof/index.js"
+    },
+    "./tasks": {
+      "types": "./dist/src/tasks/index.d.ts",
+      "import": "./dist/src/tasks/index.js"
     }
   },
   "files": [

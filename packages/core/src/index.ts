@@ -14,4 +14,5 @@ export * from './meta/index.js';
 export * from './safety/index.js';
 export * from './mcp/index.js';
 export * from './proof/index.js';
+export * from './tasks/index.js';
 export * from './client.js';
